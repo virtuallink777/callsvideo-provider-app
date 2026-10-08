@@ -1,41 +1,20 @@
-import { Audio } from "expo-av";
+// src/services/ringtone.ts
+// v2.0.0: el sonido de llamada lo maneja el canal NATIVO de Notifee
+// (ringtone.mp3 empaquetado en res/raw + canal "incoming_calls").
+// Estas funciones quedan como no-op por compatibilidad con los screens de v1.
 
-let sound: Audio.Sound | null = null;
-let starting = false;
-let wantRing = false;
+export const startRingtone = async (): Promise<void> => {
+  console.log("🔊 [ringtone] El sonido lo pone el canal nativo de Notifee");
+};
 
-export async function startRingtone() {
-  wantRing = true;
-  if (sound || starting) return;
-  starting = true;
-  try {
-    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-    const { sound: s } = await Audio.Sound.createAsync(
-      require("../../assets/ringtone.mp3"),
-      { shouldPlay: true, isLooping: true, volume: 1.0 },
-    );
-    if (!wantRing) {
-      await s.unloadAsync(); // se pidió detener mientras cargaba
-      return;
-    }
-    sound = s;
-    console.log("🔔 Timbre sonando");
-  } catch (e) {
-    console.log("❌ Error ringtone:", e);
-  } finally {
-    starting = false;
-  }
-}
+export const stopRingtone = async (): Promise<void> => {
+  console.log("🔕 [ringtone] Detenido (canal nativo)");
+};
 
-export async function stopRingtone() {
-  wantRing = false;
-  try {
-    if (sound) {
-      const s = sound;
-      sound = null;
-      await s.stopAsync();
-      await s.unloadAsync();
-      console.log("🔕 Timbre detenido");
-    }
-  } catch {}
-}
+export const startVibration = async (): Promise<void> => {
+  console.log("📳 [vibration] El canal nativo ya vibra");
+};
+
+export const stopVibration = async (): Promise<void> => {
+  console.log("📳 [vibration] Detenida");
+};
