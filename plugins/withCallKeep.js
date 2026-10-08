@@ -1,32 +1,29 @@
-// plugins/withCallKeep.js
-const { withAndroidManifest } = require("@expo/config-plugins");
+﻿const { withAndroidManifest } = require("@expo/config-plugins");
 
 const withCallKeep = (config) => {
   return withAndroidManifest(config, (config) => {
     const androidManifest = config.modResults;
-    
-    // Asegurar que la aplicación tenga el atributo name
-    if (!androidManifest.manifest.application) {
-      androidManifest.manifest.application = [{}];
-    }
-    
     const application = androidManifest.manifest.application[0];
-    
-    // Agregar la actividad de Callkeep si no existe
-    if (!application.activity) {
-      application.activity = [];
+
+    if (!application.service) {
+      application.service = [];
     }
-    
-    const hasCallKeepActivity = application.activity.some(
-      (activity) => activity.$["android:name"] === "io.wazo.callkeep.VoiceConnectionService"
+
+    const serviceName = "io.wazo.callkeep.VoiceConnectionService";
+
+    const hasCallKeepService = application.service.some(
+      (service) =>
+        service.$ &&
+        service.$["android:name"] === serviceName
     );
-    
-    if (!hasCallKeepActivity) {
-      application.activity.push({
+
+    if (!hasCallKeepService) {
+      application.service.push({
         $: {
-          "android:name": "io.wazo.callkeep.VoiceConnectionService",
+          "android:name": serviceName,
           "android:label": "phone",
-          "android:permission": "android.permission.BIND_TELECOM_CONNECTION_SERVICE",
+          "android:permission":
+            "android.permission.BIND_TELECOM_CONNECTION_SERVICE",
           "android:exported": "true",
         },
         "intent-filter": [
@@ -42,7 +39,7 @@ const withCallKeep = (config) => {
         ],
       });
     }
-    
+
     return config;
   });
 };
