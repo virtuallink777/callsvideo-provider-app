@@ -1,24 +1,47 @@
-const { withAndroidManifest } = require("@expo/config-plugins");
+﻿const { withAndroidManifest } = require("@expo/config-plugins");
 
 module.exports = function withNotificationChannelFix(config) {
   return withAndroidManifest(config, (config) => {
     const manifest = config.modResults.manifest;
 
-    // Por si el template no lo trae declarado
+    // Asegurar namespace de tools
     manifest.$["xmlns:tools"] = "http://schemas.android.com/tools";
 
     const app = manifest.application[0];
-    const target = (app["meta-data"] || []).find(
-      (m) =>
-        m.$["android:name"] ===
-        "com.google.firebase.messaging.default_notification_channel_id",
+
+    if (!app["meta-data"]) {
+      app["meta-data"] = [];
+    }
+
+    const metaData = app["meta-data"];
+
+    const channelName =
+      "com.google.firebase.messaging.default_notification_channel_id";
+
+    let target = metaData.find(
+      (m) => m.$ && m.$["android:name"] === channelName
     );
 
     if (target) {
+      target.$["android:value"] = "incoming_calls";
       target.$["tools:replace"] = "android:value";
+
+      console.log(
+        "[withNotificationChannelFix] Firebase notification channel corregido."
+      );
     } else {
-      console.warn(
-        "[withNotificationChannelFix] No se encontró el meta-data de Firebase — revisá el orden de plugins en app.json.",
+      target = {
+        $: {
+          "android:name": channelName,
+          "android:value": "incoming_calls",
+          "tools:replace": "android:value",
+        },
+      };
+
+      metaData.push(target);
+
+      console.log(
+        "[withNotificationChannelFix] Firebase notification channel creado."
       );
     }
 
