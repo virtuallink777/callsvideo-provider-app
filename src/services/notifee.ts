@@ -3,7 +3,7 @@ import notifee, {
   AndroidImportance,
   AndroidVisibility,
   AndroidCategory,
-} from "@notifee/react-native";
+} from "react-native-notify-kit";
 
 import { Platform } from "react-native";
 

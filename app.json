@@ -42,26 +42,21 @@
       ]
     },
     "plugins": [
-  [
-    "expo-notifications",
-    {
-      "icon": "./assets/icon.png",
-      "color": "#4f8ef7",
-      "defaultChannel": "incoming_calls",
-      "sounds": ["./assets/ringtone.mp3"]
-    }
-  ],
-  "@react-native-firebase/app",
-  "@react-native-firebase/messaging",
-  "./plugins/withCallKeep.js",
-  "@config-plugins/react-native-webrtc"
-],
-    "notification": {
-      "icon": "./assets/icon.png",
-      "color": "#4f8ef7",
-      "androidMode": "default",
-      "androidCollapsedTitle": "CallsVideo"
-    },
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#4f8ef7",
+          "defaultChannel": "incoming_calls",
+          "sounds": ["./assets/ringtone.mp3"]
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging",
+      "./plugins/withCallKeep.js",
+      "@config-plugins/react-native-webrtc",
+      "./plugins/withNotificationChannelFix.js"
+    ],
     "extra": {
       "eas": {
         "projectId": "ba576808-972f-4bf3-8935-0029be335bfc"
