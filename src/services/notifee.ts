@@ -6,6 +6,7 @@ import notifee, {
 } from "react-native-notify-kit";
 
 import { Platform } from "react-native";
+import { displayIncomingCall } from "./callkeep";
 
 const CHANNEL_CALLS = "incoming_calls";
 const CHANNEL_SERVICE = "service_keepalive";
@@ -58,7 +59,7 @@ export const startForegroundService = async (): Promise<void> => {
       title: "CallsVideo Provider",
       body: "🟢 Esperando llamadas entrantes...",
       android: {
-        channelId: CHANNEL_SERVICE, // ← canal silencioso
+        channelId: CHANNEL_SERVICE,
         asForegroundService: true,
         ongoing: true,
       },
@@ -88,12 +89,12 @@ export const displayFullNotification = async (data: {
       typeCall: data.typeCall,
     },
     android: {
-      channelId: CHANNEL_CALLS, // ← canal de llamadas (suena + vibra)
+      channelId: CHANNEL_CALLS,
       category: AndroidCategory.CALL,
       fullScreenAction: {
         id: "incoming_call_screen",
       },
-      ongoing: false, // ← CRÍTICO: false para que suene
+      ongoing: false,
       autoCancel: true,
       color: "#4f8ef7",
       smallIcon: "ic_notification",
@@ -111,4 +112,20 @@ export const displayFullNotification = async (data: {
     },
   });
   console.log("📱 Notificación full-screen mostrada");
+};
+
+/**
+ * Muestra notificación de llamada con CallKeep + sonido + vibración.
+ * CallKeep muestra la UI nativa, pero necesitamos asegurar que suene.
+ */
+export const displayCallWithSound = async (data: {
+  callSessionId: string;
+  clientEmail: string;
+  typeCall: "video" | "audio";
+}): Promise<void> => {
+  // Primero mostrar CallKeep (UI nativa)
+  await displayIncomingCall(data);
+
+  // Después mostrar notificación con sonido (respaldo)
+  await displayFullNotification(data);
 };

@@ -101,6 +101,7 @@ function AppContent() {
     socket.on("incoming_call", (data: any) => {
       console.log("📞 Llamada entrante (socket):", data);
       setIncomingCall(data);
+      navigationRef.current?.navigate("IncomingCall");
     });
 
     // Llamada terminada
@@ -127,6 +128,8 @@ function AppContent() {
     };
   }, [isLoggedIn, providerEmail]);
 
+  const navigationRef = useRef<any>(null);
+
   // ─────────────────────────────────────────────────────────────────
   // FOREGROUND: manejar mensajes FCM cuando la app está abierta
   // ─────────────────────────────────────────────────────────────────
@@ -135,11 +138,15 @@ function AppContent() {
       console.log("📨 FCM en foreground:", data);
 
       if (data.type === "incoming_call") {
-        setIncomingCall({
+        const callData = {
           callSessionId: data.callSessionId,
           clientEmail: data.clientEmail,
           typeCall: data.typeCall,
-        });
+        };
+        setIncomingCall(callData);
+
+        // ✅ NAVEGAR AUTOMÁTICAMENTE a la pantalla de llamada
+        navigationRef.current?.navigate("IncomingCall");
       }
 
       if (data.type === "cancel_call") {
@@ -150,7 +157,6 @@ function AppContent() {
 
     return unsubscribe;
   }, []);
-
   // ─────────────────────────────────────────────────────────────────
   // CALLKEEP LISTENERS: qué hacer cuando el usuario contesta/rechaza
   // ─────────────────────────────────────────────────────────────────

@@ -14,9 +14,9 @@ import {
 import { Platform } from "react-native";
 import { BACKEND_URL } from "../config/backend";
 
-import { displayIncomingCall, endCall } from "./callkeep";
-
+import { displayCallWithSound } from "./notifee";
 import { startForegroundService } from "./notifee";
+import { endCall } from "./callkeep"; // ← AGREGAR ESTE IMPORT
 
 type FCMData = {
   [key: string]: string | object | undefined;
@@ -28,16 +28,11 @@ type FCMMessage = {
 
 /**
  * Instancia de Firebase Messaging.
- *
- * En @react-native-firebase/messaging 26.x
- * se utiliza la API modular.
  */
 const messaging = getMessaging();
 
 /**
  * Pide permiso de notificaciones.
- *
- * Android 13+ requiere permiso POST_NOTIFICATIONS.
  */
 export const requestNotificationPermission = async (): Promise<boolean> => {
   try {
@@ -59,9 +54,6 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 
 /**
  * Registra un token FCM específico en nuestro backend.
- *
- * Esta función recibe directamente el token para evitar
- * llamar getToken() nuevamente cuando Firebase lo refresca.
  */
 const registerTokenInBackend = async (
   providerEmail: string,
@@ -96,15 +88,11 @@ const registerTokenInBackend = async (
 
 /**
  * Obtiene el token FCM actual y lo registra.
- *
- * Se llama normalmente después del login del provider.
  */
 export const registerFCMToken = async (
   providerEmail: string,
 ): Promise<void> => {
   try {
-    // Forzar rotación: borrar token viejo y generar uno nuevo
-    // Esto resuelve el problema de "registration-token-not-registered"
     try {
       await deleteToken(messaging);
       console.log("🗑️ Token FCM viejo eliminado");
@@ -125,11 +113,9 @@ export const registerFCMToken = async (
     console.error("❌ Error obteniendo token FCM:", error);
   }
 };
+
 /**
  * Escucha cuando Firebase genera un nuevo token.
- *
- * Esto puede ocurrir, por ejemplo, cuando Firebase
- * rota el token del dispositivo.
  */
 export const listenTokenRefresh = (providerEmail: string): (() => void) => {
   const unsubscribe = onTokenRefresh(messaging, async (newToken: string) => {
@@ -142,8 +128,7 @@ export const listenTokenRefresh = (providerEmail: string): (() => void) => {
 };
 
 /**
- * Maneja mensajes FCM cuando la aplicación está
- * en PRIMER PLANO.
+ * Maneja mensajes FCM cuando la aplicación está en PRIMER PLANO.
  */
 export const setupForegroundMessageHandler = (
   onIncomingCall: (data: Record<string, string>) => void,
@@ -160,14 +145,6 @@ export const setupForegroundMessageHandler = (
       }
 
       if (data.type === "incoming_call") {
-        /*
-         * Firebase define data como:
-         *
-         * { [key: string]: string | object }
-         *
-         * Para nuestro protocolo CALLVIDEO sabemos que
-         * los datos que vienen del backend son strings.
-         */
         const callData: Record<string, string> = {};
 
         Object.entries(data).forEach(([key, value]) => {
@@ -186,13 +163,6 @@ export const setupForegroundMessageHandler = (
 
 /**
  * Handler de mensajes FCM en BACKGROUND.
- *
- * Se ejecuta cuando la aplicación está en segundo plano
- * o terminada, siempre que el mensaje FCM sea apropiado
- * para procesamiento en background.
- *
- * ESTE ES EL CAMINO CRÍTICO PARA LAS LLAMADAS CUANDO
- * EL TELÉFONO ESTÁ DORMIDO.
  */
 export const setupBackgroundMessageHandler = (): void => {
   setBackgroundMessageHandler(messaging, async (remoteMessage: FCMMessage) => {
@@ -204,48 +174,27 @@ export const setupBackgroundMessageHandler = (): void => {
       return;
     }
 
-    /**
-     * ============================================
-     * LLAMADA ENTRANTE
-     * ============================================
-     */
     if (data.type === "incoming_call") {
       console.log("📞 Llamada entrante recibida en background");
 
-      /*
-       * PRIMERO mostramos la UI nativa de llamada (suena + vibra + full-screen).
-       */
-      await displayIncomingCall({
-        callSessionId:
-          typeof data.callSessionId === "string" ? data.callSessionId : "",
+      // ✅ CORRECCIÓN: validar tipos antes de pasar a displayCallWithSound
+      const callSessionId =
+        typeof data.callSessionId === "string" ? data.callSessionId : "";
+      const clientEmail =
+        typeof data.clientEmail === "string" ? data.clientEmail : "";
+      const typeCall = data.typeCall === "audio" ? "audio" : "video";
 
-        clientEmail:
-          typeof data.clientEmail === "string" ? data.clientEmail : "",
-
-        typeCall: data.typeCall === "audio" ? "audio" : "video",
+      await displayCallWithSound({
+        callSessionId,
+        clientEmail,
+        typeCall,
       });
 
-      /*
-       * DESPUÉS iniciamos el foreground service (silencioso).
-       */
       await startForegroundService();
 
       return;
     }
 
-    /**
-     * ============================================
-     * CANCELAR LLAMADA
-     * ============================================
-     *
-     * Ejemplo:
-     *
-     * El cliente contestó desde otro dispositivo.
-     *
-     * El backend envía:
-     *
-     * type = cancel_call
-     */
     if (data.type === "cancel_call") {
       console.log("📴 Cancelando llamada:", data.callSessionId);
 
