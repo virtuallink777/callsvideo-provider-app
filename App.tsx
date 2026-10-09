@@ -18,7 +18,7 @@ import {
   setupCallKeepListeners,
 } from "./src/services/callkeep";
 import {
-  createNotificationChannel,
+  createNotificationChannels,
   startForegroundService,
 } from "./src/services/notifee";
 
@@ -46,7 +46,7 @@ function AppContent() {
         await requestNotificationPermission();
 
         // 2. Crear canal de notificaciones
-        await createNotificationChannel();
+        await createNotificationChannels();
 
         // 3. Iniciar Callkeep (UI nativa de llamada)
         if (Platform.OS === "android") {
