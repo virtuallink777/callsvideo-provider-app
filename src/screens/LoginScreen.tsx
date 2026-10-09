@@ -35,7 +35,7 @@ export default function LoginScreen() {
       const data = await res.json();
 
       if (res.ok && data.token) {
-        if (data.role !== "provider") {
+        if (data.user?.role !== "provider") {
           Alert.alert("Acceso denegado", "Esta app es solo para proveedores");
           setLoading(false);
           return;
