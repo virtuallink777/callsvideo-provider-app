@@ -213,12 +213,7 @@ export const setupBackgroundMessageHandler = (): void => {
       console.log("📞 Llamada entrante recibida en background");
 
       /*
-       * Primero iniciamos el foreground service.
-       */
-      await startForegroundService();
-
-      /*
-       * Después mostramos la UI nativa de llamada.
+       * PRIMERO mostramos la UI nativa de llamada (suena + vibra + full-screen).
        */
       await displayIncomingCall({
         callSessionId:
@@ -229,6 +224,11 @@ export const setupBackgroundMessageHandler = (): void => {
 
         typeCall: data.typeCall === "audio" ? "audio" : "video",
       });
+
+      /*
+       * DESPUÉS iniciamos el foreground service (silencioso).
+       */
+      await startForegroundService();
 
       return;
     }

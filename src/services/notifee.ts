@@ -7,33 +7,47 @@ import notifee, {
 
 import { Platform } from "react-native";
 
-const CHANNEL_ID = "incoming_calls";
+const CHANNEL_CALLS = "incoming_calls";
+const CHANNEL_SERVICE = "service_keepalive";
 const FOREGROUND_SERVICE_ID = "callsvideo_service";
 
 /**
- * Crea el canal de notificaciones para llamadas entrantes
+ * Crea los 2 canales de notificaciones:
+ * 1. incoming_calls: para llamadas entrantes (suena + vibra + full-screen)
+ * 2. service_keepalive: para el foreground service (silencioso)
  */
-export const createNotificationChannel = async (): Promise<string> => {
-  if (Platform.OS !== "android") return CHANNEL_ID;
+export const createNotificationChannels = async (): Promise<void> => {
+  if (Platform.OS !== "android") return;
 
-  const channelId = await notifee.createChannel({
-    id: CHANNEL_ID,
+  // Canal de llamadas (ALERTA: suena + vibra + full-screen)
+  await notifee.createChannel({
+    id: CHANNEL_CALLS,
     name: "Llamadas Entrantes",
     importance: AndroidImportance.HIGH,
-    sound: "ringtone", // usa el ringtone.mp3 de assets
+    sound: "ringtone",
     vibration: true,
     vibrationPattern: [300, 500, 300, 500],
     lights: true,
     lightColor: "#4f8ef7",
-    bypassDnd: true, // ignora "No molestar"
+    bypassDnd: true,
   });
 
-  console.log("📢 Canal de notificaciones creado:", channelId);
-  return channelId;
+  // Canal del servicio (SILENCIOSO: solo mantiene la app viva)
+  await notifee.createChannel({
+    id: CHANNEL_SERVICE,
+    name: "Servicio en Segundo Plano",
+    importance: AndroidImportance.LOW,
+    sound: undefined,
+    vibration: false,
+    lights: false,
+  });
+
+  console.log("📢 Canales de notificaciones creados");
 };
 
 /**
- * Inicia el foreground service para mantener la app viva en background
+ * Inicia el foreground service para mantener la app viva en background.
+ * Usa el canal SILENCIOSO para no interferir con las llamadas.
  */
 export const startForegroundService = async (): Promise<void> => {
   if (Platform.OS !== "android") return;
@@ -44,34 +58,20 @@ export const startForegroundService = async (): Promise<void> => {
       title: "CallsVideo Provider",
       body: "🟢 Esperando llamadas entrantes...",
       android: {
-        channelId: CHANNEL_ID,
-        asForegroundService: true, // ← ESTO mantiene la app viva
-        ongoing: true, // no se puede deslizar para cerrar
-        color: "#4f8ef7",
-        smallIcon: "ic_notification",
-        visibility: AndroidVisibility.PUBLIC,
+        channelId: CHANNEL_SERVICE, // ← canal silencioso
+        asForegroundService: true,
+        ongoing: true,
       },
     });
-    console.log("🔔 Foreground service iniciado");
+    console.log("🔋 Foreground service iniciado");
   } catch (error) {
     console.error("❌ Error iniciando foreground service:", error);
   }
 };
 
 /**
- * Detiene el foreground service
- */
-export const stopForegroundService = async (): Promise<void> => {
-  try {
-    await notifee.cancelNotification(FOREGROUND_SERVICE_ID);
-    console.log("🔕 Foreground service detenido");
-  } catch (error) {
-    console.error("❌ Error deteniendo foreground service:", error);
-  }
-};
-
-/**
- * Muestra una notificación full-screen (fallback si Callkeep falla)
+ * Muestra la notificación de llamada entrante (full-screen + sonido + vibración).
+ * NO usa ongoing: true porque las notificaciones ongoing son silenciosas.
  */
 export const displayFullNotification = async (data: {
   callSessionId: string;
@@ -88,13 +88,13 @@ export const displayFullNotification = async (data: {
       typeCall: data.typeCall,
     },
     android: {
-      channelId: CHANNEL_ID,
+      channelId: CHANNEL_CALLS, // ← canal de llamadas (suena + vibra)
       category: AndroidCategory.CALL,
       fullScreenAction: {
-        id: "incoming_call_screen", // ← abre la pantalla de llamada a pantalla completa
+        id: "incoming_call_screen",
       },
-      ongoing: true,
-      autoCancel: false,
+      ongoing: false, // ← CRÍTICO: false para que suene
+      autoCancel: true,
       color: "#4f8ef7",
       smallIcon: "ic_notification",
       visibility: AndroidVisibility.PUBLIC,
@@ -111,11 +111,4 @@ export const displayFullNotification = async (data: {
     },
   });
   console.log("📱 Notificación full-screen mostrada");
-};
-
-/**
- * Cancela una notificación específica
- */
-export const cancelNotification = async (id: string): Promise<void> => {
-  await notifee.cancelNotification(id);
 };
