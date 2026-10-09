@@ -6,6 +6,7 @@ import {
   getToken,
   onTokenRefresh,
   onMessage,
+  deleteToken,
   setBackgroundMessageHandler,
   AuthorizationStatus,
 } from "@react-native-firebase/messaging";
@@ -102,20 +103,28 @@ export const registerFCMToken = async (
   providerEmail: string,
 ): Promise<void> => {
   try {
+    // Forzar rotación: borrar token viejo y generar uno nuevo
+    // Esto resuelve el problema de "registration-token-not-registered"
+    try {
+      await deleteToken(messaging);
+      console.log("🗑️ Token FCM viejo eliminado");
+    } catch (e) {
+      console.log("ℹ️ No había token viejo para eliminar");
+    }
+
     const token = await getToken(messaging);
 
     if (!token) {
       console.error("❌ Firebase no devolvió un token FCM");
-
       return;
     }
 
+    console.log("🔑 Nuevo token FCM generado:", token.substring(0, 30) + "...");
     await registerTokenInBackend(providerEmail, token);
   } catch (error) {
     console.error("❌ Error obteniendo token FCM:", error);
   }
 };
-
 /**
  * Escucha cuando Firebase genera un nuevo token.
  *
